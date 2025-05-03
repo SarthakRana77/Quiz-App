@@ -3,8 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const app = express();
-const PORT = 3000;
-const axios = require('axios');
+const PORT = process.env.PORT || 3000; // ✅ Use this in server.jsconst axios = require('axios');
 const he = require('he'); // HTML entity decoder
 app.use(cors());
 app.use(bodyParser.json());
