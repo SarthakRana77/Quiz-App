@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script src="https://cdn.jsdelivr.net/npm/he@1.2.0/he.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quiz Game</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+        }
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        .question-container {
+            margin-bottom: 20px;
+        }
+        .question {
+            font-size: 1.2em;
+            margin-bottom: 15px;
+            font-weight: bold;
+        }
+        .options {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        .option {
+            padding: 10px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .option:hover {
+            background-color: #2980b9;
+        }
+        .score-container {
+            text-align: center;
+            margin: 20px 0;
+            font-size: 1.2em;
+        }
+        .funny-name {
+            font-style: italic;
+            color: #e74c3c;
+        }
+        .high-scores {
+            margin-top: 30px;
+        }
+        .high-scores table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .high-scores th, .high-scores td {
+            padding: 8px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        .high-scores th {
+            background-color: #2c3e50;
+            color: white;
+        }
+        .hidden {
+            display: none;
+        }
+        #start-screen, #quiz-screen, #result-screen {
+            transition: opacity 0.5s;
+        }
+        #name-input {
+            padding: 8px;
+            width: 200px;
+            margin-right: 10px;
+        }
+        #start-btn {
+            padding: 8px 15px;
+            background-color: #2ecc71;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        #start-btn:hover {
+            background-color: #27ae60;
+        }
+        #next-btn {
+            padding: 10px 20px;
+            background-color: #f39c12;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+        #next-btn:hover {
+            background-color: #d35400;
+        }
+        #restart-btn {
+            padding: 10px 20px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+        #restart-btn:hover {
+            background-color: #2980b9;
+        }
+        .correct {
+            background-color: #2ecc71 !important;
+        }
+        .incorrect {
+            background-color: #e74c3c !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Quiz Game</h1>
+        
+        <!-- Start Screen -->
+        <div id="start-screen">
+            <h2>Welcome to the Quiz Game!</h2>
+            <p>Enter your first name to get started and receive your funny quiz name!</p>
+            <input type="text" id="name-input" placeholder="Your first name">
+            <button id="start-btn">Start Quiz</button>
+        </div>
+        
+        <!-- Quiz Screen -->
+        <div id="quiz-screen" class="hidden">
+            <div class="score-container">
+                Score: <span id="score">0</span> | 
+                Player: <span id="player-name"></span> (<span id="funny-name" class="funny-name"></span>)
+            </div>
+            <div class="question-container">
+                <div class="question" id="question"></div>
+                <div class="options" id="options"></div>
+            </div>
+            <button id="next-btn" class="hidden">Next Question</button>
+        </div>
+        
+        <!-- Result Screen -->
+        <div id="result-screen" class="hidden">
+            <h2>Quiz Completed!</h2>
+            <p>Your final score: <span id="final-score"></span></p>
+            <p>Your funny name: <span id="final-funny-name" class="funny-name"></span></p>
+            
+            <div class="high-scores">
+                <h3>High Scores</h3>
+                <table id="high-scores-table">
+                    <thead>
+                        <tr>
+                            <th>Rank</th>
+                            <th>Player</th>
+                            <th>Funny Name</th>
+                            <th>Score</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+            
+            <button id="restart-btn">Play Again</button>
+        </div>
+    </div>
+
+    <script>
+        // DOM Elements
+        
+        const startScreen = document.getElementById('start-screen');
+        const quizScreen = document.getElementById('quiz-screen');
+        const resultScreen = document.getElementById('result-screen');
+        const nameInput = document.getElementById('name-input');
+        const startBtn = document.getElementById('start-btn');
+        const nextBtn = document.getElementById('next-btn');
+        const restartBtn = document.getElementById('restart-btn');
+        const questionElement = document.getElementById('question');
+        const optionsElement = document.getElementById('options');
+        const scoreElement = document.getElementById('score');
+        const playerNameElement = document.getElementById('player-name');
+        const funnyNameElement = document.getElementById('funny-name');
+        const finalScoreElement = document.getElementById('final-score');
+        const finalFunnyNameElement = document.getElementById('final-funny-name');
+        const highScoresTable = document.querySelector('#high-scores-table tbody');
+
+        // Game state
+        let questions = [];
+        let currentQuestionIndex = 0;
+        let score = 0;
+        let playerName = '';
+        let funnyName = '';
+        let selectedAnswer = null;
+        let answerSelected = false;
+
+        // Event Listeners
+        startBtn.addEventListener('click', startQuiz);
+        nextBtn.addEventListener('click', showNextQuestion);
+        restartBtn.addEventListener('click', restartQuiz);
+
+        // Functions
+        async function startQuiz() {
+            playerName = nameInput.value.trim();
+            if (!playerName) {
+                alert('Please enter your name');
+                return;
+            }
+
+            // Generate funny name (in a real app, this would come from the backend)
+            funnyName = await generateFunnyName(playerName);
+            
+            playerNameElement.textContent = playerName;
+            funnyNameElement.textContent = funnyName;
+            
+            // Fetch questions from the backend
+            try {
+                const response = await fetch('http://localhost:3000/api/questions');
+                questions = await response.json();
+                
+                if (questions.length === 0) {
+                    throw new Error('No questions available');
+                }
+                
+                startScreen.classList.add('hidden');
+                quizScreen.classList.remove('hidden');
+                showQuestion();
+            } catch (error) {
+                console.error('Error loading questions:', error);
+                alert('Failed to load questions. Please try again later.');
+            }
+        }
+
+        async function generateFunnyName(firstName) {
+            try {
+                // In a real app, you would call the backend to generate the name
+                // For this example, we'll simulate it with a simple pattern
+                const funnyParts = [
+                    'The Great', 'Master', 'Captain', 'Professor', 'Doctor', 
+                    'The Wise', 'The Brave', 'The Batman', 'The Clever'
+                ];
+                const funnySuffixes = [
+                    'Banana', 'Pickle', 'Noodle', 'Potato', 'Unicorn', 'Wizard'
+                ];
+                
+                const randomPart = funnyParts[Math.floor(Math.random() * funnyParts.length)];
+                const randomSuffix = funnySuffixes[Math.floor(Math.random() * funnySuffixes.length)];
+                
+                return `${randomPart} ${firstName} ${randomSuffix}`;
+            } catch (error) {
+                console.error('Error generating funny name:', error);
+                return `${firstName} the Quizzer`;
+            }
+        }
+
+        function showQuestion() {
+        answerSelected = false;
+        nextBtn.classList.add('hidden');
+        
+        const currentQuestion = questions[currentQuestionIndex];
+        questionElement.textContent = he.decode(currentQuestion.question);
+        
+        optionsElement.innerHTML = '';
+        currentQuestion.options.forEach((option, index) => {
+            const button = document.createElement('button');
+            button.classList.add('option');
+            button.textContent = he.decode(option);
+            button.addEventListener('click', () => selectAnswer(option, button));
+            optionsElement.appendChild(button);
+        });
+    }
+
+    function selectAnswer(selectedOption, button) {
+        if (answerSelected) return;
+        
+        answerSelected = true;
+        selectedAnswer = selectedOption;
+        
+        const currentQuestion = questions[currentQuestionIndex];
+        const isCorrect = selectedOption === currentQuestion.correctAnswer;
+        
+        if (isCorrect) {
+            score++;
+            scoreElement.textContent = score;
+            button.classList.add('correct');
+        } else {
+            button.classList.add('incorrect');
+            // Highlight correct answer
+            const options = optionsElement.querySelectorAll('.option');
+            options.forEach(opt => {
+                if (he.decode(opt.textContent) === he.decode(currentQuestion.correctAnswer)) {
+                    opt.classList.add('correct');
+                }
+            });
+        }
+        
+        nextBtn.classList.remove('hidden');
+    }
+        function showNextQuestion() {
+            currentQuestionIndex++;
+            
+            if (currentQuestionIndex < questions.length) {
+                showQuestion();
+            } else {
+                endQuiz();
+            }
+        }
+
+        async function endQuiz() {
+            // Submit score to backend
+            try {
+                const response = await fetch('http://localhost:3000/api/scores', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        playerName: playerName,
+                        funnyName: funnyName,
+                        score: score
+                    })
+                });
+                
+                const data = await response.json();
+                console.log('Score submitted:', data);
+                
+                // Display final results
+                finalScoreElement.textContent = score;
+                finalFunnyNameElement.textContent = funnyName;
+                
+                // Load high scores
+                await loadHighScores();
+                
+                quizScreen.classList.add('hidden');
+                resultScreen.classList.remove('hidden');
+            } catch (error) {
+                console.error('Error submitting score:', error);
+                alert('Failed to submit score. Please try again later.');
+            }
+        }
+
+        async function loadHighScores() {
+            try {
+                const response = await fetch('http://localhost:3000/api/high-scores');
+                const highScores = await response.json();
+                
+                highScoresTable.innerHTML = '';
+                highScores.forEach((score, index) => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${index + 1}</td>
+                        <td>${score.playerName}</td>
+                        <td>${score.funnyName}</td>
+                        <td>${score.score}</td>
+                    `;
+                    highScoresTable.appendChild(row);
+                });
+            } catch (error) {
+                console.error('Error loading high scores:', error);
+                highScoresTable.innerHTML = '<tr><td colspan="4">Failed to load high scores</td></tr>';
+            }
+        }
+
+        function restartQuiz() {
+            // Reset game state
+            currentQuestionIndex = 0;
+            score = 0;
+            scoreElement.textContent = '0';
+            selectedAnswer = null;
+            answerSelected = false;
+            
+            // Show start screen
+            resultScreen.classList.add('hidden');
+            startScreen.classList.remove('hidden');
+            nameInput.value = '';
+            nameInput.focus();
+        }
+    </script>
+</body>
+</html>
